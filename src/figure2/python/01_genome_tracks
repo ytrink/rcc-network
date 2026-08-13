@@ -1,0 +1,176 @@
+#!/bin/bash
+# Figure 2 - Panel C: Genome browser tracks (TREM2 locus)
+# Generates: pyGenomeTracks PDF for TREM2 with SPI1 and MAFB regulatory links
+#
+# Dependencies:
+#   - utils/scenicplus_to_bedpe.py
+#   - pyGenomeTracks
+#   - bedtools
+
+set -euo pipefail
+
+# ── Parameters ─────────────────────────────────────────────────────────────────
+GENE="TREM2"
+TFS=("SPI1" "MAFB")
+REGION="chr6:40963102-41363102"
+
+# Highlight colors per TF (must match TFS array order)
+TF_COLORS=("yellow" "red")
+TF_ALPHAS=("1" "0.3")
+
+# bigWig files for each cell type (pseudobulk ATAC)
+declare -A BW_FILES=(
+  ["B cell"]="${DATA_DIR}/pseudobulk_bw/b-cell.bw"
+  ["Endothelial"]="${DATA_DIR}/pseudobulk_bw/endothelial.bw"
+  ["Fibroblasts"]="${DATA_DIR}/pseudobulk_bw/fibro.bw"
+  ["Mac/Mono"]="${DATA_DIR}/pseudobulk_bw/mac_mono.bw"
+  ["T/NK"]="${DATA_DIR}/pseudobulk_bw/T_NK.bw"
+  ["Tumor"]="${DATA_DIR}/pseudobulk_bw/tumor.bw"
+)
+BW_ORDER=("B cell" "Endothelial" "Fibroblasts" "Mac/Mono" "T/NK" "Tumor")
+
+# ── Paths ──────────────────────────────────────────────────────────────────────
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+DATA_DIR="${ROOT_DIR}/data"
+UTILS_DIR="${ROOT_DIR}/utils"
+OUT_DIR="${ROOT_DIR}/figures/figure2/python/genome_tracks"
+
+EREG="${DATA_DIR}/eRegulon_direct.tsv"
+TSS="${DATA_DIR}/tss.bed"
+GTF="${DATA_DIR}/hg38_genes.gtf"
+
+BEDPE_DIR="${OUT_DIR}/bedpe_files"
+MERGED_DIR="${OUT_DIR}/merged_enhancers"
+GTF_DIR="${OUT_DIR}/gtf_files"
+TRACKS_DIR="${OUT_DIR}/tracks_files"
+PLOTS_DIR="${OUT_DIR}/plots"
+
+mkdir -p "$BEDPE_DIR" "$MERGED_DIR" "$GTF_DIR" "$TRACKS_DIR" "$PLOTS_DIR"
+
+# ── Step 1: Generate BEDPE and enhancer BED files for each TF ─────────────────
+for TF in "${TFS[@]}"; do
+  python "${UTILS_DIR}/scenicplus_to_bedpe.py" \
+    --ereg              "$EREG" \
+    --tss               "$TSS" \
+    --out               "${BEDPE_DIR}/links_${TF}_${GENE}.bedpe" \
+    --out-enhancers-bed "${BEDPE_DIR}/enh_${TF}_${GENE}.bed" \
+    --tf                "$TF" \
+    --gene              "$GENE" \
+    --region            "$REGION" \
+    --top-n             200 \
+    --cmap              Blues \
+    --log-score \
+    --merge-enhancers
+done
+
+# ── Step 2: Merge enhancer BEDs across all TFs ────────────────────────────────
+cat "${BEDPE_DIR}/enh_"*"_${GENE}.bed" \
+  | awk 'NF>=3' \
+  | cut -f1-3 \
+  | sort -k1,1 -k2,2n \
+  | bedtools merge \
+  > "${MERGED_DIR}/enh_${GENE}_merged.bed"
+
+# ── Step 3: Extract gene-specific GTF ─────────────────────────────────────────
+CHR="${REGION%%:*}"
+COORDS="${REGION#*:}"
+START="${COORDS%-*}"
+END="${COORDS#*-}"
+OUT_GTF="${GTF_DIR}/genes_${GENE}_only.gtf"
+
+awk -v chr="$CHR" -v start="$START" -v end="$END" -v gene="$GENE" '
+  /^#/ { next }
+  $1 == chr && $4 <= end && $5 >= start && $0 ~ ("gene_name \"" gene "\"")
+' "$GTF" > "$OUT_GTF"
+
+# ── Step 4: Generate .ini tracks file ─────────────────────────────────────────
+INI_FILE="${TRACKS_DIR}/tracks_${GENE}.ini"
+
+{
+  # Enhancer highlights per TF
+  for i in "${!TFS[@]}"; do
+    TF="${TFS[$i]}"
+    COLOR="${TF_COLORS[$i]}"
+    ALPHA="${TF_ALPHAS[$i]}"
+    echo "[Enhancer highlights ${TF}]"
+    echo "file = ${BEDPE_DIR}/enh_${TF}_${GENE}.bed"
+    echo "type = vhighlight"
+    echo "color = ${COLOR}"
+    echo "line_width = 5"
+    echo "alpha = ${ALPHA}"
+    echo ""
+  done
+
+  # bigWig coverage tracks
+  for CELL_TYPE in "${BW_ORDER[@]}"; do
+    echo "[${CELL_TYPE}]"
+    echo "file = ${BW_FILES[$CELL_TYPE]}"
+    echo "title = ${CELL_TYPE}"
+    echo "height = 2"
+    echo "min_value = 0"
+    echo "max_value = 5"
+    echo "show_yaxis = false"
+    echo "y_axis_values = false"
+    echo "show_data_range = false"
+    echo ""
+  done
+
+  # Spacer
+  echo "[spacer]"
+  echo ""
+
+  # Merged enhancers BED
+  echo "[Enhancers]"
+  echo "file = ${MERGED_DIR}/enh_${GENE}_merged.bed"
+  echo "file_type = bed"
+  echo "height = 0.3"
+  echo "display = collapsed"
+  echo "color = black"
+  echo "border_color = black"
+  echo "show_labels = false"
+  echo "labels = false"
+  echo "fontsize = 0"
+  echo ""
+
+  # Arc links per TF
+  for TF in "${TFS[@]}"; do
+    echo "[${TF}→${GENE} links]"
+    echo "file = ${BEDPE_DIR}/links_${TF}_${GENE}.bedpe"
+    echo "file_type = links"
+    echo "links_type = arcs"
+    echo "use_rgb = true"
+    echo "alpha = 0.45"
+    echo "line_width = 0.6"
+    echo "height = 1.4"
+    echo "title = ${TF} → ${GENE}"
+    echo ""
+  done
+
+  # GTF gene track
+  echo "[Genes]"
+  echo "file = ${OUT_GTF}"
+  echo "file_type = gtf"
+  echo "title = Genes"
+  echo "height = 2"
+  echo "fontsize = 8"
+  echo "prefered_name = gene_name"
+  echo "merge_transcripts = true"
+  echo "gene_rows = 2"
+  echo ""
+
+  # x-axis
+  echo "[x-axis]"
+  echo "fontsize = 8"
+
+} > "$INI_FILE"
+
+# ── Step 5: Run pyGenomeTracks ─────────────────────────────────────────────────
+TF_STR=$(IFS=_; echo "${TFS[*]}")
+
+pyGenomeTracks \
+  --tracks  "$INI_FILE" \
+  --region  "$REGION" \
+  --fontSize 16 \
+  -o "${PLOTS_DIR}/${GENE}_${TF_STR}.pdf"
+
+echo "Done: ${PLOTS_DIR}/${GENE}_${TF_STR}.pdf"
