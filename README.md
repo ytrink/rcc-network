@@ -82,5 +82,6 @@ UMAP and genome plots can be reproduced using main figure scripts - please conta
 ## 💾 Data Availability Note
 
 > [!NOTE]
-> Large data files, such as the SCENIC+ output files, are available upon request from the corresponding author.
+> Large data files, such as the SCENIC+ output files, are available at Zenodo: 10.5281/zenodo.22945133
+
 
