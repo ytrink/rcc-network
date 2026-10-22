@@ -111,9 +111,11 @@ for (cell_type in names(TF_LISTS)) {
   write.csv(tf_metrics, file.path(out_dir, paste0(cell_type, "_tf_centrality_metrics.csv")), row.names = FALSE)
 
   fig <- FIGURE[[cell_type]]
-  ggsave(file.path(out_dir, paste0("Fig", fig, "_", cell_type, "_influence_vs_betweenness.pdf")),
-         scatter(tf_metrics, "betweenness", "Undirected Betweenness", "#7B4CCB"), width = 7, height = 5)
-  ggsave(file.path(out_dir, paste0("Fig", fig, "_", cell_type, "_influence_vs_pagerank.pdf")),
-         scatter(tf_metrics, "pagerank", "Reverse PageRank", "blue"), width = 7, height = 5)
+  for (ext in c("pdf", "png")) {
+    ggsave(file.path(out_dir, paste0("Fig", fig, "_", cell_type, "_influence_vs_betweenness.", ext)),
+           scatter(tf_metrics, "betweenness", "Undirected Betweenness", "#7B4CCB"), width = 7, height = 5, dpi = 300, bg = "white")
+    ggsave(file.path(out_dir, paste0("Fig", fig, "_", cell_type, "_influence_vs_pagerank.", ext)),
+           scatter(tf_metrics, "pagerank", "Reverse PageRank", "blue"), width = 7, height = 5, dpi = 300, bg = "white")
+  }
 }
 cat("Saved ->", out_dir, "\n")
