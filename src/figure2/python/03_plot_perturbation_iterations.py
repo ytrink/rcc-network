@@ -12,16 +12,17 @@ import sys
 import matplotlib
 matplotlib.use('Agg')
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-ROOT_DIR    = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
-UTILS_DIR   = os.path.join(ROOT_DIR, "utils")
-FIG_DIR     = os.path.join(ROOT_DIR, "figures", "figure2", "python", "perturbation")
-PERTURB_DIR = os.path.join(FIG_DIR, "results")
-PLOTS_DIR   = os.path.join(FIG_DIR, "iteration_plots")
+# -- Paths ----------------------------------------------------------------------
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "utils"))   # src/utils
+from paths import data_path, results_dir
 
-os.makedirs(PLOTS_DIR, exist_ok=True)
-sys.path.append(UTILS_DIR)
-from iteration_func import plot_program_ylim
+INPUT_DIR   = data_path("perturbation", "mac_mono")   # raw-count matrices exported by preprocessing/monocle (see README)
+MODEL_DIR   = results_dir("figure2", "perturbation")                  # regressors.pkl.gz
+PERTURB_DIR = results_dir("figure2", "perturbation", "over_iter")     # <TF>_perturbation_over_iter.pkl.gz
+PLOTS_DIR   = results_dir("figure2", "perturbation", "iteration_plots")
+ERROR_LOG   = MODEL_DIR / "perturbation_errors.txt"
 
 # ── TF configurations ──────────────────────────────────────────────────────────
 TF_CONFIGS = [
@@ -56,7 +57,7 @@ TF_CONFIGS = [
 # ── Plot ───────────────────────────────────────────────────────────────────────
 for config in TF_CONFIGS:
     tf       = config["tf"]
-    pkl_path = os.path.join(PERTURB_DIR, f"{tf}_perturbation_over_iter.pkl.gz")
+    pkl_path = str(PERTURB_DIR / f"{tf}_perturbation_over_iter.pkl.gz")
     print(f"Plotting {tf}...")
 
     plot_program_ylim(
@@ -64,7 +65,7 @@ for config in TF_CONFIGS:
         targets            = config["genes"],
         pkl_path           = pkl_path,
         program_given_name = tf,
-        base_plot_dir      = PLOTS_DIR,
+        base_plot_dir      = str(PLOTS_DIR),
         ylim               = (-1.2, 1.2),
         gene_colors        = config["gene_colors"]
     )

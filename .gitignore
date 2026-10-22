@@ -1,0 +1,9 @@
+# Large inputs (download from Zenodo, see README) and generated outputs
+data/*
+!data/scplus/
+data/scplus/*
+!data/scplus/leiden_RB_03_pos.csv
+results/
+.Rhistory
+.RData
+__pycache__/

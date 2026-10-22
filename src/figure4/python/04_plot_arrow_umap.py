@@ -13,19 +13,17 @@ from datetime import datetime
 
 import pandas as pd
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-ROOT_DIR  = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
-DATA_DIR  = os.path.join(ROOT_DIR, "data")
-UTILS_DIR = os.path.join(ROOT_DIR, "utils")
-FIG_DIR   = os.path.join(ROOT_DIR, "figures", "figure4", "python", "perturbation")
+# -- Paths ----------------------------------------------------------------------
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "utils"))   # src/utils
+from paths import data_path, results_dir
 
-PERTURB_DIR = os.path.join(FIG_DIR, "results")
-PLOTS_DIR   = os.path.join(FIG_DIR, "arrow_plots")
-ERROR_LOG   = os.path.join(FIG_DIR, "perturbation_errors.txt")
-
-os.makedirs(PLOTS_DIR, exist_ok=True)
-sys.path.append(UTILS_DIR)
-import perturbation_functions as pf
+INPUT_DIR   = results_dir("figure4")                    # written by figure4/R/01_umap.R and 02_regulatory_influence.R
+MODEL_DIR   = results_dir("figure4", "perturbation")                  # regressors.pkl.gz
+PERTURB_DIR = results_dir("figure4", "perturbation", "over_iter")     # <TF>_perturbation_over_iter.pkl.gz
+PLOTS_DIR   = results_dir("figure4", "perturbation", "arrow_plots")
+ERROR_LOG   = MODEL_DIR / "perturbation_errors.txt"
 
 # ── Parameters ─────────────────────────────────────────────────────────────────
 CELL_TYPE = "endo"
@@ -42,14 +40,14 @@ def timestamp(msg: str):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}")
 
 # ── Load data ──────────────────────────────────────────────────────────────────
-umap_df = pd.read_csv(os.path.join(DATA_DIR, CELL_TYPE, "X_umap.csv"), index_col=0)
+umap_df = pd.read_csv(INPUT_DIR / "X_umap.csv", index_col=0)
 umap_df.index = "X" + umap_df.index.astype(str)
 
-direct_eregulons   = pd.read_table(os.path.join(DATA_DIR, "scplus", "eRegulon_direct.tsv"))
-extended_eregulons = pd.read_table(os.path.join(DATA_DIR, "scplus", "eRegulon_extended.tsv"))
+direct_eregulons   = pd.read_table(data_path("scplus", "eRegulon_direct.tsv"))
+extended_eregulons = pd.read_table(data_path("scplus", "eRegulons_extended.tsv"))
 
 # ── Skip TFs already processed ────────────────────────────────────────────────
-tfs_done   = [name for name in os.listdir(PLOTS_DIR) if os.path.isdir(os.path.join(PLOTS_DIR, name))]
+tfs_done   = [name for name in os.listdir(PLOTS_DIR) if os.path.isdir(str(PLOTS_DIR / name))]
 tfs_to_run = list(set(TFS).difference(set(tfs_done)))
 timestamp(f"Running arrow plots for {len(tfs_to_run)} TFs ({len(tfs_done)} already done)")
 
@@ -61,8 +59,8 @@ for tf in tfs_to_run:
             tf                 = tf,
             direct_eregulons   = direct_eregulons,
             extended_eregulons = extended_eregulons,
-            plots_folder       = os.path.join(PLOTS_DIR, tf),
-            out_folder         = PERTURB_DIR
+            plots_folder       = str(PLOTS_DIR / tf),
+            out_folder         = str(PERTURB_DIR)
         )
     except Exception as e:
         error_msg = (

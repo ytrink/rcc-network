@@ -1,94 +1,64 @@
-# network_analysis/01_aucell_scores.R
+# src/figure1/R/01_aucell_scores.R
 #
-# Computes AUCell regulon activity scores for Li et al. scRNA-seq data
-# using SCENIC+ eRegulon gene sets.
+# AUCell regulon activity scores for the Li et al. scRNA-seq data (Figure 1C).
+# Port of stuff_to_run_on_the_side/AUC_SCPLUS/scplus_fragments_downsampled/auc_li_all/run_auc_all_ccRCC.R
 #
-# Input:  data/li/Li_integrated.rds
-#         data/scplus_direct_extended_POS.xlsx
-# Output: network_analysis/outputs/auc_matrix.csv
-#         network_analysis/outputs/auc_matrix_standardized.csv
-#         network_analysis/outputs/cell_annotations.csv
+#   - cells: Li et al. cells from the 10 patients with ccRCC histology (metadata_merged.csv, Histology == "ccRCC")
+#   - expression: RNA, LogNormalize (scale factor 1e4)
+#   - gene sets: activating regulons (positive rho_TF2G), i.e. each TF's targets in the positive-link GRN
+#     (originally written to scplus_direct_extended_POS.xlsx in analysis.ipynb; built here from the graphml)
+#   - AUCell scores are row-standardized (z-score per regulon) for the heatmap
+#
+# Input:  data/li/Li_integrated.rds              (preprocessing/scrna/li/02_processing_li.R)
+#         data/li/metadata_merged.csv
+#         data/scplus/scplus_direct_extended.graphml
+# Output: results/figure1/aucell/auc_matrix.csv, auc_matrix_stand.csv, cell_annotations.csv
 
 library(Seurat)
 library(AUCell)
 library(GSEABase)
-library(readxl)
+library(igraph)
 library(data.table)
 library(here)
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-root_dir    <- here::here()
-data_dir    <- file.path(root_dir, "data")
-out_dir     <- file.path(root_dir, "network_analysis", "outputs")
+source(here::here("src", "utils", "paths.R"))
+out_dir <- results_dir("figure1", "aucell")
 
-dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+# ── Gene sets: activating regulons ─────────────────────────────────────────────
+g     <- read_graph(data_path("scplus", "scplus_direct_extended.graphml"), format = "graphml")
+edges <- igraph::as_data_frame(g, what = "edges")
+edges <- edges[edges$regulation == 1, ]                      # = rho_TF2G > 0
+regulons  <- split(edges$to, edges$from)
+gene_sets <- GeneSetCollection(lapply(names(regulons), function(tf) GeneSet(unique(regulons[[tf]]), setName = tf)))
 
-# ── Helper: build gene sets from Excel ────────────────────────────────────────
-build_gene_sets <- function(filepath) {
-  sheet_names <- excel_sheets(filepath)
-  gene_sets   <- lapply(sheet_names, function(sheet) {
-    targets <- read_excel(filepath, sheet = sheet)$Targets
-    GeneSet(targets, setName = sheet)
-  })
-  names(gene_sets) <- sheet_names
-  GeneSetCollection(gene_sets)
-}
-
-# ── Helper: run AUCell ────────────────────────────────────────────────────────
-run_aucell <- function(gene_sets_filepath, expr_matrix, out_dir, n_cores = 24) {
-  
-  # Build gene sets
-  gene_set_collection <- build_gene_sets(gene_sets_filepath)
-  gene_sets <- subsetGeneSets(gene_set_collection, rownames(expr_matrix))
-  gene_sets <- setGeneSetNames(
-    gene_sets,
-    newNames = paste0(names(gene_sets), " (", nGenes(gene_sets), "g)")
-  )
-  
-  # Rankings
-  message("Building cell rankings...")
-  cells_rankings <- AUCell_buildRankings(expr_matrix, plotStats = FALSE, nCores = n_cores)
-  
-  # AUC scores
-  message("Running AUC...")
-  cells_AUC <- AUCell_calcAUC(gene_sets, cells_rankings)
-  
-  # Save AUC matrix
-  auc_matrix <- as.data.frame(cells_AUC@assays@data@listData$AUC)
-  fwrite(
-    data.table::data.table(Regulon = rownames(auc_matrix), auc_matrix),
-    file = file.path(out_dir, "auc_matrix.csv")
-  )
-  
-  message("Done.")
-  return(cells_AUC)
-}
-
-# ── Load data ──────────────────────────────────────────────────────────────────
-data.li <- readRDS(file.path(data_dir, "li", "Li_integrated.rds"))
+# ── Cells: ccRCC patients only ─────────────────────────────────────────────────
+data.li <- readRDS(data_path("li", "Li_integrated.rds"))
 colnames(data.li) <- paste0("LI_", data.li$patient, "_", colnames(data.li))
 
-data.li <- NormalizeData(data.li, assay = "RNA", normalization.method = "LogNormalize",
-                         scale.factor = 10000, verbose = FALSE)
+sample_metadata <- read.csv(data_path("li", "metadata_merged.csv"))
+rownames(sample_metadata) <- sample_metadata$barcode
+stopifnot(all(colnames(data.li) %in% rownames(sample_metadata)))
+sample_metadata <- sample_metadata[colnames(data.li), ]
 
-expr_matrix <- GetAssayData(JoinLayers(data.li), assay = "RNA", slot = "data")
+data.li <- data.li[, sample_metadata$Histology == "ccRCC"]
+cat("ccRCC cells:", ncol(data.li), "from", length(unique(data.li$patient)), "patients\n")
 
-# ── Run AUCell ─────────────────────────────────────────────────────────────────
-run_aucell(
-  gene_sets_filepath = file.path(data_dir, "scplus_direct_extended_POS.xlsx"),
-  expr_matrix        = expr_matrix,
-  out_dir            = out_dir
-)
+DefaultAssay(data.li) <- "RNA"
+data.li <- NormalizeData(data.li, assay = "RNA", normalization.method = "LogNormalize", scale.factor = 10000)
+expr_matrix <- GetAssayData(JoinLayers(data.li, overwrite = TRUE), assay = "RNA", layer = "data")
 
-# ── Save cell annotations ──────────────────────────────────────────────────────
+# ── AUCell ─────────────────────────────────────────────────────────────────────
+gene_sets <- subsetGeneSets(gene_sets, rownames(expr_matrix))
+gene_sets <- setGeneSetNames(gene_sets, newNames = paste0(names(gene_sets), " (", nGenes(gene_sets), "g)"))
+
+cells_rankings <- AUCell_buildRankings(expr_matrix, plotStats = FALSE, nCores = 24)
+cells_AUC      <- AUCell_calcAUC(gene_sets, cells_rankings)
+
+auc_matrix <- as.data.frame(cells_AUC@assays@data@listData$AUC)
+fwrite(data.table(Gene = rownames(auc_matrix), auc_matrix), file.path(out_dir, "auc_matrix.csv"))
 write.csv(data.li$annotation, file.path(out_dir, "cell_annotations.csv"))
 
-# ── Standardize AUC matrix ────────────────────────────────────────────────────
-auc_matrix <- fread(file.path(out_dir, "auc_matrix.csv")) |>
-  as.data.frame()
-rownames(auc_matrix) <- auc_matrix[[1]]
-auc_matrix[[1]]      <- NULL
-auc_matrix_std       <- t(scale(t(auc_matrix)))
-
-write.csv(auc_matrix_std, file.path(out_dir, "auc_matrix_standardized.csv"))
-cat("Saved standardized AUC matrix\n")
+# ── Row-standardize (z-score per regulon) ──────────────────────────────────────
+auc_matrix_std <- t(scale(t(as.matrix(auc_matrix))))
+write.csv(auc_matrix_std, file.path(out_dir, "auc_matrix_stand.csv"))
+cat("Saved ->", out_dir, "\n")

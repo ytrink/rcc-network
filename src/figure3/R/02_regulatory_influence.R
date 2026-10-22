@@ -1,12 +1,12 @@
-# figures/figure3/R/02_regulatory_influence.R
+# results/figure3/02_regulatory_influence.R
 #
 # Computes and plots TF regulatory influence scores for the
 # CD8+ T cell exhaustion transition (Non-exhausted → Exhausted).
 #
 # Input:  data/li/Li_CD8T_normalized.rds
 #         data/scplus/scplus_direct_extended.graphml
-# Output: figures/figure3/R/tf_regulatory_influence_scores.csv
-#         figures/figure3/R/regulatory_influence_barplot.pdf
+# Output: results/figure3/tf_regulatory_influence_scores.csv
+#         results/figure3/regulatory_influence_barplot.pdf
 
 library(Seurat)
 library(DESeq2)
@@ -19,10 +19,11 @@ library(here)
 set.seed(101)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-root_dir    <- here::here()
+source(here::here("src", "utils", "paths.R"))
+root_dir    <- ROOT_DIR
 data_dir    <- file.path(root_dir, "data")
 network_dir <- file.path(root_dir, "data", "scplus")
-out_dir     <- file.path(root_dir, "figures", "figure3", "R")
+out_dir     <- results_dir("figure3")
 
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 

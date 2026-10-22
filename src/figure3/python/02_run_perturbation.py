@@ -16,15 +16,17 @@ from datetime import datetime
 
 import pandas as pd
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-ROOT_DIR  = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
-DATA_DIR  = os.path.join(ROOT_DIR, "data")
-UTILS_DIR = os.path.join(ROOT_DIR, "utils")
-OUT_DIR   = os.path.join(ROOT_DIR, "figures", "figure3", "python", "perturbation", "results")
+# -- Paths ----------------------------------------------------------------------
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "utils"))   # src/utils
+from paths import data_path, results_dir
 
-os.makedirs(OUT_DIR, exist_ok=True)
-sys.path.append(UTILS_DIR)
-import perturbation_functions as pf
+INPUT_DIR   = data_path("perturbation", "CD8")        # raw-count matrices exported by preprocessing/monocle (see README)
+MODEL_DIR   = results_dir("figure3", "perturbation")                  # regressors.pkl.gz
+PERTURB_DIR = results_dir("figure3", "perturbation", "over_iter")     # <TF>_perturbation_over_iter.pkl.gz
+PLOTS_DIR   = results_dir("figure3", "perturbation", "arrow_plots")
+ERROR_LOG   = MODEL_DIR / "perturbation_errors.txt"
 
 # ── Parameters ─────────────────────────────────────────────────────────────────
 CELL_TYPE = "CD8"
@@ -43,7 +45,7 @@ def timestamp(msg: str):
 # ── Filter to expressed TFs ────────────────────────────────────────────────────
 expressed_genes = set(
     pd.read_csv(
-        os.path.join(DATA_DIR, CELL_TYPE, "CD8_expressed_genes_10perc.csv"),
+        data_path("li", "CD8_expressed_genes_10perc.csv"),
         index_col=0
     )["x"]
 )
@@ -51,14 +53,14 @@ tfs = list(set(TFS).intersection(expressed_genes))
 
 # ── Load regressors ────────────────────────────────────────────────────────────
 timestamp("Loading regressors...")
-with gzip.open(os.path.join(OUT_DIR, "..", "regressors.pkl.gz"), "rb") as f:
+with gzip.open(MODEL_DIR / "regressors.pkl.gz", "rb") as f:
     regressors = pickle.load(f)
 timestamp("Regressors loaded.")
 
 # ── Load expression matrix ─────────────────────────────────────────────────────
 timestamp("Loading expression matrix...")
 X = pd.read_csv(
-    os.path.join(DATA_DIR, CELL_TYPE, "cds_normalized_tcells_sampled_7500.csv"),
+    INPUT_DIR / "cds_normalized_tcells_sampled_7500.csv",
     index_col=0
 ).T
 timestamp("Expression matrix loaded.")
@@ -70,7 +72,7 @@ for tf in tfs:
         exprMatrix = X,
         tf         = tf,
         regressors = regressors,
-        out_folder = OUT_DIR
+        out_folder = str(PERTURB_DIR)
     )
 
 timestamp("Done.")

@@ -6,17 +6,15 @@ library(dplyr)
 library(ggplot2)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-root_dir  <- "https://github.com/ytrink/rcc-network"
-data_dir  <- file.path(root_dir, "data")
-umap_dir  <- file.path(root_dir, "preprocessing", "monocle", "mac_mono")
-out_dir   <- file.path(root_dir, "figures", "figure2")
+source(here::here("src", "utils", "paths.R"))
+out_dir <- results_dir("figure2")
 
 # ── Load data ──────────────────────────────────────────────────────────────────
-rna.li <- readRDS(file.path(data_dir, "Li_mac_mono.rds"))
+rna.li <- readRDS(data_path("li", "Li_mac_mono.rds"))
 colnames(rna.li) <- paste0("LI_", rna.li$patient, "_", colnames(rna.li))
 DefaultAssay(rna.li) <- "RNA"
 
-X_umap <- read.csv(file.path(umap_dir, "cds_mac_mono_umap_sampled30k.csv"), row.names = 1)
+X_umap <- read.csv(data_path("monocle", "cds_mac_mono_umap_sampled30k.csv"), row.names = 1)  # from preprocessing/monocle/01_run_monocle3_mac_mono.R
 
 # ── Subset to common cells ─────────────────────────────────────────────────────
 common_cells  <- intersect(rownames(X_umap), colnames(rna.li))

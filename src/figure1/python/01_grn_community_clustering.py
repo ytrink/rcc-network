@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-figures/figure1/python/01_grn_community_clustering.py
+src/figure1/python/01_grn_community_clustering.py
 
 Performs Leiden community clustering on the SCENIC+ gene regulatory network (GRN)
 using positive regulation links (regulation == 1) and interaction weights (rho_TF2G).
 
-Input:  data/eRegulon_direct.tsv
-        data/eRegulons_extended.tsv
-Output: data/community_clustering/leiden_communities_pos_res0.3.csv
-        data/community_clustering/tf_community_mapping.csv
-        data/community_clustering/grn_positive_communities.graphml
+Note: the original run (analysis.ipynb) used no seed. Leiden is stochastic, so the published
+communities are shipped as data/scplus/leiden_RB_03_pos.csv (= Table S1) and used by downstream scripts.
+
+Input:  data/scplus/eRegulon_direct.tsv
+        data/scplus/eRegulons_extended.tsv
+Output: results/figure1/community_clustering/leiden_communities_pos_res0.3.csv
+        results/figure1/community_clustering/tf_community_mapping.csv
+        results/figure1/community_clustering/grn_positive_communities.graphml
 """
 
 import os
@@ -19,11 +22,13 @@ import igraph as ig
 import leidenalg as la
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-DATA_DIR = os.path.join(ROOT_DIR, "data")
-OUT_DIR  = os.path.join(ROOT_DIR, "data", "community_clustering")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "utils"))   # src/utils
+from paths import data_path, results_dir
 
-os.makedirs(OUT_DIR, exist_ok=True)
+DATA_DIR = str(data_path("scplus"))
+OUT_DIR  = str(results_dir("figure1", "community_clustering"))
 
 # ── Parameters ─────────────────────────────────────────────────────────────────
 RESOLUTION_PARAM = 0.3  # Resolution parameter matching manuscript Methods text
@@ -33,9 +38,6 @@ SEED             = 101  # Reproducibility seed
 print("Loading SCENIC+ eRegulon tables...")
 direct_path   = os.path.join(DATA_DIR, "eRegulon_direct.tsv")
 extended_path = os.path.join(DATA_DIR, "eRegulons_extended.tsv")
-
-if not os.path.exists(extended_path):
-    extended_path = os.path.join(DATA_DIR, "eRegulon_extended.tsv")
 
 direct_eregulons   = pd.read_table(direct_path)
 extended_eregulons = pd.read_table(extended_path)

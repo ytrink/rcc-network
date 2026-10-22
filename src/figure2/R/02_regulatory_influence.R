@@ -9,13 +9,11 @@ library(ggrepel)
 library(DESeq2)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-root_dir     <- "https://github.com/ytrink/rcc-network"
-data_dir     <- file.path(root_dir, "data")
-network_dir  <- file.path(root_dir, "network_analysis")
-out_dir      <- file.path(root_dir, "figures", "figure2")
+source(here::here("src", "utils", "paths.R"))
+out_dir <- results_dir("figure2")
 
 # ── Load data ──────────────────────────────────────────────────────────────────
-rna.li <- readRDS(file.path(data_dir, "Li_mac_mono.rds"))
+rna.li <- readRDS(data_path("li", "Li_mac_mono.rds"))
 colnames(rna.li) <- paste0("LI_", rna.li$patient, "_", colnames(rna.li))
 DefaultAssay(rna.li) <- "RNA"
 
@@ -74,7 +72,7 @@ deg_dir <- res_df %>%
   mutate(dir_num = ifelse(direction == "TAM_up", 1, -1))
 
 # ── Load GRN and extract TF edges ─────────────────────────────────────────────
-g <- read_graph(file.path(network_dir, "scplus_direct_extended.graphml"), format = "graphml")
+g <- read_graph(data_path("scplus", "scplus_direct_extended.graphml"), format = "graphml")
 
 node_type <- setNames(V(g)$type, V(g)$name)
 edges <- igraph::as_data_frame(g, what = "edges") %>%

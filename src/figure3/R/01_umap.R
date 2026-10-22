@@ -1,12 +1,12 @@
-# figures/figure3/R/01_umap.R
+# results/figure3/01_umap.R
 #
 # Generates UMAP plots for CD8+ T cell exhaustion analysis (Figure 3).
 # Plots: (1) exhaustion score, (2) Ex/Non-ex group assignment
 #
 # Input:  data/li/Li_CD8T_normalized.rds
-#         data/monocle/cd8/cds_tcells_umap.csv
-# Output: figures/figure3/R/umap_exhaustion_score.pdf
-#         figures/figure3/R/umap_ex_groups.pdf
+#         data/monocle/cds_tcells_umap.csv
+# Output: results/figure3/umap_exhaustion_score.pdf
+#         results/figure3/umap_ex_groups.pdf
 
 library(Seurat)
 library(dplyr)
@@ -16,9 +16,10 @@ library(here)
 set.seed(101)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-root_dir <- here::here()
+source(here::here("src", "utils", "paths.R"))
+root_dir <- ROOT_DIR
 data_dir <- file.path(root_dir, "data")
-out_dir  <- file.path(root_dir, "figures", "figure3", "R")
+out_dir  <- results_dir("figure3")
 
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
@@ -52,7 +53,7 @@ keep_cells   <- rownames(md)[md$sample_id %in% names(which(table(md$sample_id) >
 rna.li       <- subset(rna.li, cells = keep_cells)
 
 # ── Load Monocle UMAP and embed ────────────────────────────────────────────────
-X_umap      <- read.csv(file.path(data_dir, "monocle", "cd8", "cds_tcells_umap.csv"), row.names = 1)
+X_umap      <- read.csv(file.path(data_dir, "monocle", "cds_tcells_umap.csv"), row.names = 1)
 common_cells <- intersect(rownames(X_umap), colnames(rna.li))
 rna.li.umap  <- rna.li[, common_cells]
 X_umap       <- X_umap[colnames(rna.li.umap), ]

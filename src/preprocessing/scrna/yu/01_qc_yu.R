@@ -14,7 +14,7 @@ library(dplyr)
 set.seed(101)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-root_dir  <- rprojroot::find_rstudio_root_file()
+root_dir  <- here::here()
 data_dir  <- file.path(root_dir, "data", "yu", "scrna")
 out_dir   <- file.path(root_dir, "data", "yu", "scrna", "per_sample")
 qc_dir    <- file.path(root_dir, "preprocessing", "scrna", "qc_plots")

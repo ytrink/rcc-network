@@ -1,9 +1,6 @@
-"""
-utils/complex_heatmap_functions.R
-
-Utility functions for building and drawing ComplexHeatmap objects.
-Called by figures/figure1/R/01_aucell_heatmap.R and other figure scripts.
-"""
+# src/utils/complex_heatmap_functions.R
+#
+# Utility functions for building and drawing ComplexHeatmap objects (used by src/figure1/R/02_aucell_heatmap.R).
 
 library(ComplexHeatmap)
 library(circlize)
@@ -67,7 +64,10 @@ draw_complex_heatmap.pdf <- function(heatmap_matrix,
     right_annotation          = right_annotation,
     na_col                    = "black",
     row_names_gp              = gpar(fontsize = font.size),
-    heatmap_legend_param      = list(legend_gp = gpar(fontsize = 8))
+    heatmap_legend_param      = list(legend_gp = gpar(fontsize = 8)),
+    use_raster                = TRUE,          # rasterize the heatmap body (thousands of cells)
+    raster_device             = "png",
+    raster_quality            = 4
   )
   
   ht_drawn <- draw(ht)
@@ -99,7 +99,10 @@ draw_complex_heatmap.pdf.nonclustered_cells <- function(heatmap_matrix,
     right_annotation          = right_annotation,
     na_col                    = "black",
     row_names_gp              = gpar(fontsize = font.size),
-    heatmap_legend_param      = list(legend_gp = gpar(fontsize = 8))
+    heatmap_legend_param      = list(legend_gp = gpar(fontsize = 8)),
+    use_raster                = TRUE,          # rasterize the heatmap body (thousands of cells)
+    raster_device             = "png",
+    raster_quality            = 4
   )
   
   ht_drawn <- draw(ht)
@@ -146,7 +149,10 @@ draw_complex_heatmap.pdf.ordered_by_metadata <- function(heatmap_matrix,
     column_title              = paste("Sorted by", metadata_column),
     show_column_names         = FALSE,
     row_names_gp              = gpar(fontsize = 7),
-    na_col                    = "black"
+    na_col                    = "black",
+    use_raster                = TRUE,
+    raster_device             = "png",
+    raster_quality            = 4
   )
   
   draw(ht)

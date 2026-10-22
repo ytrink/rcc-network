@@ -1,84 +1,64 @@
-# preprocessing/monocle/02_run_monocle3_cd8_tcells.R
+# src/preprocessing/monocle/02_run_monocle3_cd8_tcells.R
 #
-# Monocle3 cell embedding, UMAP reduction, trajectory analysis, and
-# pseudotime ordering for CD8+ T-cells (Li et al. cohort).
+# Monocle3 embedding of Li et al. CD8+ T cells (UMAP of Fig. 3A/F) and the cell subsets used by the
+# perturbation analysis (Fig. 3E/F).
+# Port of stuff_to_run_on_the_side/monocle_scplus/run_monocle.R (object cds_1.rds, verified: 84,849 cells,
+# 100 PCA/aligned dims) and monocle/T_NK/Li/run_monocle.R (exports).
 #
-# Input:  data/Li_TNK.rds
-# Output: preprocessing/monocle/cd8_tcell/cds_tcells_umap_sampled30k.csv
-#         preprocessing/monocle/cd8_tcell/cds_normalized_tcells_sampled30k.csv
-#         figures/figure3/umap_cd8_exhaustion.pdf
+# Cells: 11 CD8+ T-cell subtypes; cycling CD8+ T cells (and gamma-delta/MAIT cells) are excluded.
+# Note: the original script aligns on a "Sample" column that is not part of the Li metadata; the batch
+#       variable used here is "patient" (as for macrophages/monocytes).
+# Note: Monocle's exprs() returns raw counts, so the exported "normalized" matrices are raw counts.
+#
+# Input:  data/li/Li_T.rds (Li et al. T cells; any Li object containing the CD8+ subtypes below works),
+#         data/li/metadata_merged.csv
+# Output: results/monocle/cd8/cds_tcells.rds
+#         data/monocle/cds_tcells_umap.csv                                     (UMAP for Fig. 3A)
+#         data/perturbation/CD8/cds_normalized_tcells_sampled_7500.csv, cds_tcells_umap_sampled_7500.csv
 
 library(monocle3)
 library(Seurat)
-library(ggplot2)
-library(dplyr)
 library(data.table)
 library(here)
 
-set.seed(101)
+source(here::here("src", "utils", "paths.R"))
+out_dir  <- results_dir("monocle", "cd8")
+umap_dir <- data_path("monocle");             dir.create(umap_dir, recursive = TRUE, showWarnings = FALSE)
+pert_dir <- data_path("perturbation", "CD8"); dir.create(pert_dir, recursive = TRUE, showWarnings = FALSE)
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-root_dir <- here::here()
-data_dir <- file.path(root_dir, "data")
-out_dir  <- file.path(root_dir, "preprocessing", "monocle", "cd8_tcell")
-fig_dir  <- file.path(root_dir, "figures", "figure3")
+CD8_TYPES <- c("CD8+T_Naïve/CM", "CD8+T_EM", "CD8+T_EMRA", "CD8+T_EFF.1", "CD8+T_EFF.2", "CD8+T_Act-XCL1/2",
+               "CD8+T_RM-CXCL13", "CD8+T_preEX-CXCR4", "CD8+T_preEX-PMCH", "CD8+T_EX-IL10", "CD8+T_EX-CCL4L2")
 
-dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
+# ── Cell data set (raw counts + Li metadata) ───────────────────────────────────
+rna.li <- readRDS(data_path("li", "Li_T.rds"))
+rna.li <- subset(rna.li, subset = annotation %in% CD8_TYPES)
+colnames(rna.li) <- paste0("LI_", rna.li$patient, "_", colnames(rna.li))
+rna.li <- JoinLayers(rna.li)
+expression.matrix <- GetAssayData(rna.li, assay = "RNA", layer = "counts")
 
-# ── Load Seurat Object ─────────────────────────────────────────────────────────
-cat("Loading Li et al. T/NK cell data...\n")
-rna_path <- file.path(data_dir, "Li_TNK.rds")
-if (!file.exists(rna_path)) {
-  rna_path <- file.path(data_dir, "Li_T.rds")
-}
-rna.li <- readRDS(rna_path)
-DefaultAssay(rna.li) <- "RNA"
+sample_metadata <- read.csv(data_path("li", "metadata_merged.csv"))
+rownames(sample_metadata) <- sample_metadata$barcode
+cell_meta <- sample_metadata[colnames(expression.matrix), ]
+gene_meta <- data.frame(gene_short_name = rownames(expression.matrix), row.names = rownames(expression.matrix))
 
-# ── Initialize Monocle3 CellDataSet ───────────────────────────────────────────
-cat("Constructing Monocle3 CellDataSet...\n")
-counts_mat  <- GetAssayData(rna.li, slot = "counts")
-cell_meta   <- rna.li@meta.data
-gene_meta   <- data.frame(gene_short_name = rownames(counts_mat), row.names = rownames(counts_mat))
+cds <- new_cell_data_set(expression.matrix, cell_metadata = cell_meta, gene_metadata = gene_meta)
 
-cds <- new_cell_data_set(
-  expression_data = counts_mat,
-  cell_metadata   = cell_meta,
-  gene_metadata   = gene_meta
-)
-
-# ── Monocle3 Preprocessing, Alignment & Dimensionality Reduction ──────────────
-cat("Running preprocess_cds(), align_cds(), and reduce_dimension()...\n")
-cds <- preprocess_cds(cds, num_dim = 30)
-if ("patient" %in% colnames(colData(cds))) {
-  cds <- align_cds(cds, alignment_group = "patient")
-}
-cds <- reduce_dimension(cds, reduction_method = "UMAP")
+# ── Embedding (parameters of the published object cds_1.rds) ──────────────────
+cds <- preprocess_cds(cds, num_dim = 100)
+cds <- align_cds(cds, alignment_group = "patient")
+cds <- reduce_dimension(cds)
 cds <- cluster_cells(cds)
 cds <- learn_graph(cds)
+saveRDS(cds, file.path(out_dir, "cds_tcells.rds"))
 
-# ── Pseudotime Ordering ────────────────────────────────────────────────────────
-cat("Ordering cells along pseudotime trajectory...\n")
-cds <- order_cells(cds)
+# ── Exports ────────────────────────────────────────────────────────────────────
+write.csv(as.data.frame(reducedDims(cds)$UMAP), file.path(umap_dir, "cds_tcells_umap.csv"))
 
-# ── Export Downsampled Datasets for downstream analysis & figures ─────────────
-cat("Exporting downsampled UMAP coordinates and expression matrices...\n")
 set.seed(123)
+cds_s <- cds[, sample(colnames(cds), size = 7500)]
+write.csv(as.data.frame(reducedDims(cds_s)$UMAP), file.path(pert_dir, "cds_tcells_umap_sampled_7500.csv"))
+m <- exprs(cds_s)
+fwrite(cbind(gene = rownames(m), as.data.frame(as.matrix(m))),
+       file = file.path(pert_dir, "cds_normalized_tcells_sampled_7500.csv"))
 
-# 30k sampled UMAP coordinates
-cell_ids_30k <- sample(colnames(cds), size = min(30000, ncol(cds)))
-cds_30k      <- cds[, cell_ids_30k]
-umap_30k     <- as.data.frame(reducedDims(cds_30k)$UMAP)
-colnames(umap_30k) <- c("UMAP_1", "UMAP_2")
-write.csv(umap_30k, file.path(out_dir, "cds_tcells_umap_sampled30k.csv"))
-
-# 30k sampled expression matrix
-expr_30k <- exprs(cds_30k)
-fwrite(
-  cbind(gene = rownames(expr_30k), as.data.frame(as.matrix(expr_30k))),
-  file = file.path(out_dir, "cds_normalized_tcells_sampled30k.csv")
-)
-
-# Save processed Monocle3 object
-saveRDS(cds, file.path(out_dir, "cds_tcells_ordered.rds"))
-cat("Saved Monocle3 object and sampling outputs ->", out_dir, "\n")
+cat("Saved ->", out_dir, umap_dir, pert_dir, "\n")

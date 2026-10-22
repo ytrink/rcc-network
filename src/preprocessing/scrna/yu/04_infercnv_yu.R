@@ -19,7 +19,7 @@ set.seed(101)
 root_dir <- here::here()
 data_dir <- file.path(root_dir, "data", "yu", "scrna")
 ref_dir  <- file.path(root_dir, "data", "annotations")
-out_dir  <- file.path(root_dir, "preprocessing", "scrna", "yu", "infercnv_results")
+out_dir  <- file.path(root_dir, "results", "preprocessing", "infercnv")
 
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 

@@ -18,7 +18,7 @@ import scanpy as sc
 import pandas as pd
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))   # repo root
 DATA_DIR = os.path.join(ROOT_DIR, "data", "li")
 OUT_DIR  = os.path.join(DATA_DIR, "matrix")
 

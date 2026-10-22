@@ -13,20 +13,17 @@ import sys
 import matplotlib
 matplotlib.use('Agg')
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-ROOT_DIR    = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
-UTILS_DIR   = os.path.join(ROOT_DIR, "utils")
-FIG_DIR     = os.path.join(ROOT_DIR, "figures", "figure4", "python", "perturbation")
-PERTURB_DIR = os.path.join(FIG_DIR, "results")
-PLOTS_DIR   = os.path.join(FIG_DIR, "iteration_plots")
+# -- Paths ----------------------------------------------------------------------
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "utils"))   # src/utils
+from paths import data_path, results_dir
 
-os.makedirs(PLOTS_DIR, exist_ok=True)
-sys.path.append(UTILS_DIR)
-from iteration_func import plot_program_ylim
-
-# ── Gene sets ──────────────────────────────────────────────────────────────────
-ANGIOGENESIS_GENES = ["ANGPT2", "PLVAP", "MCAM", "THY1"]
-VASCULAR_ECM_GENES = ["COL4A1", "COL4A2", "LAMC1", "NID1"]
+INPUT_DIR   = results_dir("figure4")                    # written by figure4/R/01_umap.R and 02_regulatory_influence.R
+MODEL_DIR   = results_dir("figure4", "perturbation")                  # regressors.pkl.gz
+PERTURB_DIR = results_dir("figure4", "perturbation", "over_iter")     # <TF>_perturbation_over_iter.pkl.gz
+PLOTS_DIR   = results_dir("figure4", "perturbation", "iteration_plots")
+ERROR_LOG   = MODEL_DIR / "perturbation_errors.txt"
 
 # ── TF configurations ──────────────────────────────────────────────────────────
 TF_CONFIGS = [
@@ -45,7 +42,7 @@ TF_CONFIGS = [
 # ── Plot ───────────────────────────────────────────────────────────────────────
 for config in TF_CONFIGS:
     tf       = config["tf"]
-    pkl_path = os.path.join(PERTURB_DIR, f"{tf}_perturbation_over_iter.pkl.gz")
+    pkl_path = str(PERTURB_DIR / f"{tf}_perturbation_over_iter.pkl.gz")
     print(f"Plotting {tf} - {config['program']}...")
 
     plot_program_ylim(
@@ -53,6 +50,6 @@ for config in TF_CONFIGS:
         targets            = config["targets"],
         pkl_path           = pkl_path,
         program_given_name = config["program"],
-        base_plot_dir      = PLOTS_DIR,
+        base_plot_dir      = str(PLOTS_DIR),
         ylim               = (-1.2, 1.2)
     )

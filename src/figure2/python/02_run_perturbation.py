@@ -16,15 +16,17 @@ from datetime import datetime
 import pandas as pd
 import sys
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-ROOT_DIR  = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
-DATA_DIR  = os.path.join(ROOT_DIR, "data")
-UTILS_DIR = os.path.join(ROOT_DIR, "utils")
-OUT_DIR   = os.path.join(ROOT_DIR, "figures", "figure2", "python", "perturbation", "results")
+# -- Paths ----------------------------------------------------------------------
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "utils"))   # src/utils
+from paths import data_path, results_dir
 
-os.makedirs(OUT_DIR, exist_ok=True)
-sys.path.append(UTILS_DIR)
-import perturbation_functions as pf
+INPUT_DIR   = data_path("perturbation", "mac_mono")   # raw-count matrices exported by preprocessing/monocle (see README)
+MODEL_DIR   = results_dir("figure2", "perturbation")                  # regressors.pkl.gz
+PERTURB_DIR = results_dir("figure2", "perturbation", "over_iter")     # <TF>_perturbation_over_iter.pkl.gz
+PLOTS_DIR   = results_dir("figure2", "perturbation", "arrow_plots")
+ERROR_LOG   = MODEL_DIR / "perturbation_errors.txt"
 
 # ── Parameters ─────────────────────────────────────────────────────────────────
 CELL_TYPE = "mac_mono"
@@ -43,13 +45,13 @@ def timestamp(msg: str):
 
 # ── Load data ──────────────────────────────────────────────────────────────────
 timestamp("Loading regressors...")
-with gzip.open(os.path.join(DATA_DIR, "regressors.pkl.gz"), "rb") as f:
+with gzip.open(INPUT_DIR / "regressors.pkl.gz", "rb") as f:
     regressors = pickle.load(f)
 timestamp("Regressors loaded.")
 
 timestamp("Loading expression matrix...")
 X = pd.read_csv(
-    os.path.join(DATA_DIR, f"cds_{CELL_TYPE}_sampled10k.csv"),
+    INPUT_DIR / f"cds_{CELL_TYPE}_sampled10k.csv",
     index_col=0
 ).T
 timestamp("Expression matrix loaded.")
@@ -61,7 +63,7 @@ for tf in TFS:
         exprMatrix = X,
         tf         = tf,
         regressors = regressors,
-        out_folder = OUT_DIR
+        out_folder = str(PERTURB_DIR)
     )
 
 timestamp("Done.")

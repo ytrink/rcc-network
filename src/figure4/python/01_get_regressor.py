@@ -16,12 +16,17 @@ import pickle
 import pandas as pd
 from scenicplus.simulation import train_gene_expression_models
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
-DATA_DIR = os.path.join(ROOT_DIR, "data")
-OUT_DIR  = os.path.join(ROOT_DIR, "figures", "figure4", "python", "perturbation")
+# -- Paths ----------------------------------------------------------------------
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "utils"))   # src/utils
+from paths import data_path, results_dir
 
-os.makedirs(OUT_DIR, exist_ok=True)
+INPUT_DIR   = results_dir("figure4")                    # written by figure4/R/01_umap.R and 02_regulatory_influence.R
+MODEL_DIR   = results_dir("figure4", "perturbation")                  # regressors.pkl.gz
+PERTURB_DIR = results_dir("figure4", "perturbation", "over_iter")     # <TF>_perturbation_over_iter.pkl.gz
+PLOTS_DIR   = results_dir("figure4", "perturbation", "arrow_plots")
+ERROR_LOG   = MODEL_DIR / "perturbation_errors.txt"
 
 # ── Parameters ─────────────────────────────────────────────────────────────────
 CELL_TYPE = "endo"
@@ -34,19 +39,19 @@ TFS = [
 ]
 
 # ── Load DEGs ──────────────────────────────────────────────────────────────────
-degs1 = list(pd.read_csv(os.path.join(DATA_DIR, CELL_TYPE, "degs_hec.csv"), index_col=0)["x"])
-degs2 = list(pd.read_csv(os.path.join(DATA_DIR, CELL_TYPE, "degs_tec.csv"), index_col=0)["x"])
+degs1 = list(pd.read_csv(INPUT_DIR / "degs_hec.csv", index_col=0)["x"])
+degs2 = list(pd.read_csv(INPUT_DIR / "degs_tec.csv", index_col=0)["x"])
 degs  = degs1 + degs2
 
 # ── Load expression matrix ─────────────────────────────────────────────────────
 X = pd.read_csv(
-    os.path.join(DATA_DIR, CELL_TYPE, "X_counts.csv"),
+    INPUT_DIR / "X_counts.csv",
     index_col=0
 ).T
 
 # ── Load eRegulon gene-TF mappings ─────────────────────────────────────────────
-direct_eregulons   = pd.read_table(os.path.join(DATA_DIR, "scplus", "eRegulon_direct.tsv"))
-extended_eregulons = pd.read_table(os.path.join(DATA_DIR, "scplus", "eRegulon_extended.tsv"))
+direct_eregulons   = pd.read_table(data_path("scplus", "eRegulon_direct.tsv"))
+extended_eregulons = pd.read_table(data_path("scplus", "eRegulons_extended.tsv"))
 
 gene_tf = pd.concat([
     direct_eregulons[["Gene", "TF"]].drop_duplicates(),
@@ -72,7 +77,7 @@ regressors = train_gene_expression_models(
 )
 
 # ── Save ───────────────────────────────────────────────────────────────────────
-out_path = os.path.join(OUT_DIR, "regressors.pkl.gz")
+out_path = MODEL_DIR / "regressors.pkl.gz"
 with gzip.open(out_path, "wb") as f:
     pickle.dump(regressors, f)
 
