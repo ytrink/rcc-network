@@ -55,6 +55,8 @@ step 3 with the Zenodo files.
 | **5. Figure 3** (CD8) | `src/figure3/R/01_umap.R`, `02_regulatory_influence.R`; `src/figure3/python/01` → `04` | Exhaustion score (LAG3+TIGIT, median split), DESeq2 (padj < 0.05, \|log2FC\| > 0.5), knockdowns | `results/figure3/` |
 | **6. Figure 4** (endothelial) | `src/figure4/R/01_umap.R` → `02_regulatory_influence.R`; `src/figure4/python/01` → `04` | Re-embedding (SCTransform → Harmony → UMAP) and UMAP panels (Fig. 4A, S12, S15); DESeq2 (padj < 0.05, \|log2FC\| > 0.5); MEF2C targets for ToppGene; knockdowns | `results/figure4/` |
 | **7. Supplementary** | `src/supplementary/compute_pagerank_and_betweeness_centrality.R` (after steps 4–6) | Reverse PageRank and betweenness in cell-type subnetworks (Figs. S6, S10, S13; Table S3) | `results/supplementary/centrality/` |
+| | `src/supplementary/centrality_edge_weight_sensitivity.R` | Same centralities with the maximum or the sum of RE weights per TF–target edge (robustness check, Methods) | `results/supplementary/centrality/` |
+| | `src/supplementary/tnk_subnetwork_for_cytoscape.R` | T/NK subnetwork of Fig. S3 (Table S3 CD8⁺ TFs → targets expressed in ≥10% of CD8⁺ T cells), for Cytoscape | `results/supplementary/tnk_subnetwork/` |
 | | `src/utils/scenic_plus_to_bedpe.py` | Region-to-gene links for genome browser views (pyGenomeTracks) | |
 
 ## Environments
@@ -74,7 +76,7 @@ step 3 with the Zenodo files.
   `degs_per_cell_type.csv`) or, for endothelial cells, TEC-vs-EC DEGs, on raw-count matrices of 7,500–15,000 cells.
   The macrophage/monocyte models of the paper were fit on a separate random sample (14,000 cells) of the same
   population.
-- **Centrality** uses the GRN graphml (one edge per TF–target pair). Results are robust to the choice of edge weight
+- **Centrality** uses the GRN graphml (one edge per TF–target pair). The main results are robust to the choice of edge weight
   (single region-to-gene link, maximum, or sum over regions).
 - `degs_per_cell_type.csv`: the original script was not saved; `03_expressed_genes_and_markers.R` uses parameters
   inferred from the published file. Use the published file to reproduce the figures exactly.
