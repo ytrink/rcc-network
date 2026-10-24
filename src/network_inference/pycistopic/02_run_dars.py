@@ -3,7 +3,7 @@
 src/network_inference/pycistopic/02_run_dars.py
 
 Differentially accessible regions (DARs) per cell type from the pycisTopic object.
-Port of /home/be/trinkya/projects/2024_09_18_ccRCC_YU/network/with_fragments_downsampling/run_dars_polars.py
+Same commands as /home/be/trinkya/projects/2024_09_18_ccRCC_YU/network/with_fragments_downsampling/run_dars_polars.py
 (run in a pycisTopic "polars" environment, see https://github.com/aertslab/pycisTopic/issues/195).
 
   - highly variable regions on imputed accessibility (min_disp 0.05, min_mean 0.0125, max_mean 3, 20 bins)

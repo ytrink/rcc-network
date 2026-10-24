@@ -45,7 +45,7 @@ step 3 with the Zenodo files.
 | | `src/preprocessing/scrna/li/03_expressed_genes_and_markers.R` | ≥10%-expressed gene lists; per-cell-type marker genes (FindAllMarkers) | `data/li/*.csv` |
 | | `src/preprocessing/scrna/zvirblyte/01_processing_zvirblyte.R` | Zvirblyte et al. endothelial object | `data/zvirblyte/zvir_endo.rds` |
 | | `src/preprocessing/monocle/01_run_monocle3_mac_mono.R`, `02_run_monocle3_cd8_tcells.R` | Monocle3 UMAPs and the cell subsets used for perturbation | `data/monocle/`, `data/perturbation/` |
-| **2. Network inference** | `src/network_inference/pycistopic/01_run_pycistopic.py` | Candidate regions (6 samples, 2 per WHO/ISUP grade). *Reconstructed; the original was run interactively from the pycisTopic tutorial* | `results/network_inference/pycistopic/` |
+| **2. Network inference** | `src/network_inference/pycistopic/01_run_pycistopic.py` | Candidate regions (6 samples, 2 per WHO/ISUP grade): pseudobulk MACS2 peaks, QC, LDA topics. *Consolidated from the interactive pycisTopic session; parameters verified against the saved objects* | `results/network_inference/pycistopic/` |
 | | `src/network_inference/pycistopic/02_run_dars.py` | DARs (adj. p < 0.05, log2FC > log2(1.5)) | region sets |
 | | `snakemake --snakefile src/network_inference/workflow/Snakefile --configfile src/network_inference/config/config.yaml` | SCENIC+ (v1.0a2, precomputed hg38 cisTarget databases). Edit the absolute paths in `config.yaml` first | eRegulon tables |
 | **3. Figure 1** | `src/figure1/python/01_grn_community_clustering.py` | Leiden communities (RB, resolution 0.3, activating links) | `results/figure1/community_clustering/` |
