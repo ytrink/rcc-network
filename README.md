@@ -7,30 +7,45 @@ CD8⁺ T cells (Li et al.) and endothelial cells (Zvirblyte et al.).
 
 ## Data
 
-Large inputs are archived on Zenodo: **https://doi.org/10.5281/zenodo.22945132**
+Processed data are archived on Zenodo: **https://doi.org/10.5281/zenodo.23648072**
 Raw data: Yu et al. GEO [GSE207493](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE207493),
 Zvirblyte et al. GEO [GSE242299](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE242299),
 Li et al. [Mendeley Data](https://data.mendeley.com/datasets/g67bkbnhhg/1).
 
 All scripts find the repository root through the `.here` file (R: `here`, Python: `src/utils/paths.py`), read inputs
-from `data/` and write outputs to `results/` (both git-ignored except the Leiden table). Expected layout:
+from `data/` and write outputs to `results/`.
+
+**Getting the data.** Small inputs are in this repository. The Zenodo files are zips whose contents sit under
+`data/...`, so they unpack into place when unzipped at the repository root. From the repository root run:
+
+```bash
+bash download_data.sh
+```
+
+or download the zips from the Zenodo page and unzip them at the repository root.
 
 ```
 data/
-├── scplus/      eRegulon_direct.tsv, eRegulons_extended.tsv, scplus_direct_extended.graphml   (Zenodo)
-│                leiden_RB_03_pos.csv  (Table S1, in this repo)
-├── li/          Li_integrated.rds, Li_mac_mono.rds, Li_CD8T_normalized.rds, Li_T.rds, metadata_merged.csv,
+├── scplus/      eRegulon_direct.tsv, eRegulons_extended.tsv, scplus_direct_extended.graphml   [Zenodo: scplus_grn.zip]
+│                leiden_RB_03_pos.csv (Table S1)                                                 [repo]
+├── li/          Li_mac_mono.rds                                                                 [Zenodo: li_mac_mono_object.zip]
+│                metadata_merged.csv                                                             [Zenodo: li_metadata.zip]
 │                degs_per_cell_type.csv, {mac_mono,CD8}_expressed_genes_10perc.csv,
-│                Li_sampled_broad2_5000_barcodes.csv
-├── zvirblyte/   zvir_endo.rds (Zenodo), optional X_umap_published.csv
-├── monocle/     cds_mac_mono_umap_sampled30k.csv, cds_tcells_umap.csv          (Zenodo or preprocessing/monocle)
-├── perturbation/mac_mono/  cds_mac_mono_sampled15k.csv, cds_mac_mono_sampled10k.csv, cds_mac_mono_umap_sampled10k.csv
+│                Li_sampled_broad2_5000_barcodes.csv (cells of Fig. 1C)                          [repo]
+│                Li_integrated.rds, Li_CD8T_normalized.rds, Li_T.rds   (not archived: built from the Li et al. data
+│                                                                        with src/preprocessing/scrna/li/)
+├── zvirblyte/   zvir_endo.rds                                                                   [Zenodo: zvirblyte_endothelial.zip]
+│                X_umap_published.csv (Fig. 4A/S12/S15 coordinates)                              [repo]
+├── monocle/     cds_mac_mono_umap_sampled30k.csv, cds_tcells_umap.csv                           [Zenodo: monocle_umaps.zip]
+├── perturbation/mac_mono/  cds_mac_mono_sampled15k.csv, cds_mac_mono_sampled10k.csv,
+│                           cds_mac_mono_umap_sampled10k.csv                                     [Zenodo: perturbation_mac_mono.zip]
 ├── perturbation/CD8/       cds_normalized_tcells_sampled_7500.csv, cds_tcells_umap_sampled_7500.csv
+│                                                                                                [Zenodo: perturbation_CD8.zip]
 └── yu/          scrna/, scatac/  (GEO downloads; for preprocessing and network inference only)
 ```
 
-Files marked "(Zenodo)" are needed to reproduce the figures without re-running the upstream steps. Everything else
-is produced by the scripts below.
+With these files the figures can be reproduced from step 3 below. Figure 1C (AUCell) and the CD8⁺ T-cell influence
+scores (Fig. 3B) additionally need `Li_integrated.rds` / `Li_CD8T_normalized.rds` from step 1.
 
 ## Run order
 

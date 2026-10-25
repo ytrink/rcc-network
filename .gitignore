@@ -3,6 +3,16 @@ data/*
 !data/scplus/
 data/scplus/*
 !data/scplus/leiden_RB_03_pos.csv
+# small inputs kept in the repository
+!data/li/
+data/li/*
+!data/li/degs_per_cell_type.csv
+!data/li/mac_mono_expressed_genes_10perc.csv
+!data/li/CD8_expressed_genes_10perc.csv
+!data/li/Li_sampled_broad2_5000_barcodes.csv
+!data/zvirblyte/
+data/zvirblyte/*
+!data/zvirblyte/X_umap_published.csv
 results/
 .Rhistory
 .RData
